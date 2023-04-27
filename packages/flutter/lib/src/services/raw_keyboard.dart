@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 
 import 'binding.dart';
 import 'hardware_keyboard.dart';
-import 'keyboard_key.dart';
+import 'keyboard_key.g.dart';
 import 'raw_keyboard_android.dart';
 import 'raw_keyboard_fuchsia.dart';
 import 'raw_keyboard_ios.dart';
@@ -18,6 +17,10 @@ import 'raw_keyboard_macos.dart';
 import 'raw_keyboard_web.dart';
 import 'raw_keyboard_windows.dart';
 import 'system_channels.dart';
+
+export 'package:flutter/foundation.dart' show DiagnosticPropertiesBuilder, ValueChanged;
+
+export 'keyboard_key.g.dart' show LogicalKeyboardKey, PhysicalKeyboardKey;
 
 /// An enum describing the side of the keyboard that a key is on, to allow
 /// discrimination between which key is pressed (e.g. the left or right SHIFT
@@ -86,7 +89,7 @@ enum ModifierKey {
 
   /// The SCROLL LOCK modifier key.
   ///
-  /// Typically, there is one of these.  Only shown as "pressed" when the scroll
+  /// Typically, there is one of these. Only shown as "pressed" when the scroll
   /// lock is on, so on a key up when the mode is turned on, on each key press
   /// when it's enabled, and on a key down when it is turned off.
   scrollLockModifier,
@@ -290,7 +293,7 @@ abstract class RawKeyEvent with Diagnosticable {
   /// instead of using the message information.
   factory RawKeyEvent.fromMessage(Map<String, Object?> message) {
     String? character;
-    RawKeyEventData _dataFromWeb() {
+    RawKeyEventData dataFromWeb() {
       final String? key = message['key'] as String?;
       if (key != null && key.isNotEmpty && key.length == 1) {
         character = key;
@@ -300,12 +303,13 @@ abstract class RawKeyEvent with Diagnosticable {
         key: key ?? '',
         location: message['location'] as int? ?? 0,
         metaState: message['metaState'] as int? ?? 0,
+        keyCode: message['keyCode'] as int? ?? 0,
       );
     }
 
     final RawKeyEventData data;
     if (kIsWeb) {
-      data = _dataFromWeb();
+      data = dataFromWeb();
     } else {
       final String keymap = message['keymap']! as String;
       switch (keymap) {
@@ -344,6 +348,7 @@ abstract class RawKeyEvent with Diagnosticable {
             charactersIgnoringModifiers: message['charactersIgnoringModifiers'] as String? ?? '',
             keyCode: message['keyCode'] as int? ?? 0,
             modifiers: message['modifiers'] as int? ?? 0,
+            specifiedLogicalKey: message['specifiedLogicalKey'] as int?,
           );
           character = message['characters'] as String?;
           break;
@@ -364,6 +369,7 @@ abstract class RawKeyEvent with Diagnosticable {
             scanCode: message['scanCode'] as int? ?? 0,
             modifiers: message['modifiers'] as int? ?? 0,
             isDown: message['type'] == 'keydown',
+            specifiedLogicalKey: message['specifiedLogicalKey'] as int?,
           );
           if (unicodeScalarValues != 0) {
             character = String.fromCharCode(unicodeScalarValues);
@@ -382,7 +388,7 @@ abstract class RawKeyEvent with Diagnosticable {
           }
           break;
         case 'web':
-          data = _dataFromWeb();
+          data = dataFromWeb();
           break;
         default:
           /// This exception would only be hit on platforms that haven't yet
@@ -457,7 +463,7 @@ abstract class RawKeyEvent with Diagnosticable {
   ///
   /// For instance, if you wanted to make a game where the key to the right of
   /// the CAPS LOCK key made the player move left, you would be comparing the
-  /// result of this `physicalKey` with [PhysicalKeyboardKey.keyA], since that
+  /// result of this [physicalKey] with [PhysicalKeyboardKey.keyA], since that
   /// is the key next to the CAPS LOCK key on a QWERTY keyboard. This would
   /// return the same thing even on a French keyboard where the key next to the
   /// CAPS LOCK produces a "Q" when pressed.
@@ -502,7 +508,7 @@ abstract class RawKeyEvent with Diagnosticable {
   /// accurately referred to as grapheme clusters) are made up of more than one
   /// code point.
   ///
-  /// The `character` doesn't take into account edits by an input method editor
+  /// The [character] doesn't take into account edits by an input method editor
   /// (IME), or manage the visibility of the soft keyboard on touch devices. For
   /// composing text, use the [TextField] or [CupertinoTextField] widgets, since
   /// those automatically handle many of the complexities of managing keyboard
@@ -526,8 +532,14 @@ abstract class RawKeyEvent with Diagnosticable {
     super.debugFillProperties(properties);
     properties.add(DiagnosticsProperty<LogicalKeyboardKey>('logicalKey', logicalKey));
     properties.add(DiagnosticsProperty<PhysicalKeyboardKey>('physicalKey', physicalKey));
+<<<<<<< HEAD
     if (this is RawKeyDownEvent)
       properties.add(DiagnosticsProperty<bool>('repeat', repeat));
+=======
+    if (this is RawKeyDownEvent) {
+      properties.add(DiagnosticsProperty<bool>('repeat', repeat));
+    }
+>>>>>>> 4d9e56e694b656610ab87fcf2efbcd226e0ed8cf
   }
 }
 
@@ -539,10 +551,17 @@ abstract class RawKeyEvent with Diagnosticable {
 class RawKeyDownEvent extends RawKeyEvent {
   /// Creates a key event that represents the user pressing a key.
   const RawKeyDownEvent({
+<<<<<<< HEAD
     required RawKeyEventData data,
     String? character,
     bool repeat = false,
   }) : super(data: data, character: character, repeat: repeat);
+=======
+    required super.data,
+    super.character,
+    super.repeat,
+  });
+>>>>>>> 4d9e56e694b656610ab87fcf2efbcd226e0ed8cf
 }
 
 /// The user has released a key on the keyboard.
@@ -553,16 +572,22 @@ class RawKeyDownEvent extends RawKeyEvent {
 class RawKeyUpEvent extends RawKeyEvent {
   /// Creates a key event that represents the user releasing a key.
   const RawKeyUpEvent({
+<<<<<<< HEAD
     required RawKeyEventData data,
     String? character,
   }) : super(data: data, character: character, repeat: false);
+=======
+    required super.data,
+    super.character,
+  }) : super(repeat: false);
+>>>>>>> 4d9e56e694b656610ab87fcf2efbcd226e0ed8cf
 }
 
 /// A callback type used by [RawKeyboard.keyEventHandler] to send key events to
 /// a handler that can determine if the key has been handled or not.
 ///
 /// The handler should return true if the key has been handled, and false if the
-/// key was not handled.  It must not return null.
+/// key was not handled. It must not return null.
 typedef RawKeyEventHandler = bool Function(RawKeyEvent event);
 
 /// An interface for listening to raw key events.
@@ -629,8 +654,8 @@ class RawKeyboard {
   /// common situation), then the exact value of [keyEventHandler] is a dummy
   /// callback and must not be invoked.
   RawKeyEventHandler? get keyEventHandler {
-    if (ServicesBinding.instance!.keyEventManager.keyMessageHandler != _cachedKeyMessageHandler) {
-      _cachedKeyMessageHandler = ServicesBinding.instance!.keyEventManager.keyMessageHandler;
+    if (ServicesBinding.instance.keyEventManager.keyMessageHandler != _cachedKeyMessageHandler) {
+      _cachedKeyMessageHandler = ServicesBinding.instance.keyEventManager.keyMessageHandler;
       _cachedKeyEventHandler = _cachedKeyMessageHandler == null ?
         null :
         (RawKeyEvent event) {
@@ -649,34 +674,25 @@ class RawKeyboard {
     _cachedKeyEventHandler = handler;
     _cachedKeyMessageHandler = handler == null ?
       null :
-      (KeyMessage message) => handler(message.rawEvent);
-    ServicesBinding.instance!.keyEventManager.keyMessageHandler = _cachedKeyMessageHandler;
+      (KeyMessage message) {
+        if (message.rawEvent != null) {
+          return handler(message.rawEvent!);
+        }
+        return false;
+      };
+    ServicesBinding.instance.keyEventManager.keyMessageHandler = _cachedKeyMessageHandler;
   }
 
   /// Process a new [RawKeyEvent] by recording the state changes and
   /// dispatching to listeners.
   bool handleRawKeyEvent(RawKeyEvent event) {
-    bool shouldDispatch = true;
     if (event is RawKeyDownEvent) {
-      if (event.data.shouldDispatchEvent()) {
-        _keysPressed[event.physicalKey] = event.logicalKey;
-      } else {
-        shouldDispatch = false;
-        _hiddenKeysPressed.add(event.physicalKey);
-      }
+      _keysPressed[event.physicalKey] = event.logicalKey;
     } else if (event is RawKeyUpEvent) {
-      if (!_hiddenKeysPressed.contains(event.physicalKey)) {
-        // Use the physical key in the key up event to find the physical key from
-        // the corresponding key down event and remove it, even if the logical
-        // keys don't match.
-        _keysPressed.remove(event.physicalKey);
-      } else {
-        _hiddenKeysPressed.remove(event.physicalKey);
-        shouldDispatch = false;
-      }
-    }
-    if (!shouldDispatch) {
-      return true;
+      // Use the physical key in the key up event to find the physical key from
+      // the corresponding key down event and remove it, even if the logical
+      // keys don't match.
+      _keysPressed.remove(event.physicalKey);
     }
     // Make sure that the modifiers reflect reality, in case a modifier key was
     // pressed/released while the app didn't have focus.
@@ -792,8 +808,9 @@ class RawKeyboard {
     ModifierKey? thisKeyModifier;
     for (final ModifierKey key in ModifierKey.values) {
       final Set<PhysicalKeyboardKey>? thisModifierKeys = _modifierKeyMap[_ModifierSidePair(key, KeyboardSide.all)];
-      if (thisModifierKeys == null)
+      if (thisModifierKeys == null) {
         continue;
+      }
       if (thisModifierKeys.contains(event.physicalKey)) {
         thisKeyModifier = key;
       }
@@ -825,9 +842,18 @@ class RawKeyboard {
         modifierKeys[physicalModifier] = _allModifiers[physicalModifier]!;
       }
     }
-    _allModifiersExceptFn.keys
-      .where((PhysicalKeyboardKey key) => !anySideKeys.contains(key))
-      .forEach(_keysPressed.remove);
+    // On Linux, CapsLock key can be mapped to a non-modifier logical key:
+    // https://github.com/flutter/flutter/issues/114591.
+    // This is also affecting Flutter Web on Linux.
+    final bool nonModifierCapsLock = (event.data is RawKeyEventDataLinux  || event.data is RawKeyEventDataWeb)
+      && _keysPressed[PhysicalKeyboardKey.capsLock] != null
+      && _keysPressed[PhysicalKeyboardKey.capsLock] != LogicalKeyboardKey.capsLock;
+    for (final PhysicalKeyboardKey physicalKey in _allModifiersExceptFn.keys) {
+      final bool skipReleasingKey = nonModifierCapsLock && physicalKey == PhysicalKeyboardKey.capsLock;
+      if (!anySideKeys.contains(physicalKey) && !skipReleasingKey) {
+        _keysPressed.remove(physicalKey);
+      }
+    }
     if (event.data is! RawKeyEventDataFuchsia && event.data is! RawKeyEventDataMacOs) {
       // On Fuchsia and macOS, the Fn key is not considered a modifier key.
       _keysPressed.remove(PhysicalKeyboardKey.fn);
@@ -837,20 +863,28 @@ class RawKeyboard {
     // exist in the modifier list. Enforce the pressing state.
     if (event is RawKeyDownEvent && thisKeyModifier != null
         && !_keysPressed.containsKey(event.physicalKey)) {
-      // So far this inconsistancy is only found on Linux GTK for AltRight in a
-      // rare case. (See https://github.com/flutter/flutter/issues/93278 .) In
-      // other cases, this inconsistancy will be caught by an assertion later.
-      if (event.data is RawKeyEventDataLinux && event.physicalKey == PhysicalKeyboardKey.altRight) {
+      // This inconsistancy is found on Linux GTK for AltRight:
+      // https://github.com/flutter/flutter/issues/93278
+      // And also on Android and iOS:
+      // https://github.com/flutter/flutter/issues/101090
+      if ((event.data is RawKeyEventDataLinux && event.physicalKey == PhysicalKeyboardKey.altRight)
+        || event.data is RawKeyEventDataIos
+        || event.data is RawKeyEventDataAndroid) {
         final LogicalKeyboardKey? logicalKey = _allModifiersExceptFn[event.physicalKey];
         if (logicalKey != null) {
           _keysPressed[event.physicalKey] = logicalKey;
         }
       }
+      // On Web, PhysicalKeyboardKey.altRight can be map to LogicalKeyboardKey.altGraph or
+      // LogicalKeyboardKey.altRight:
+      // https://github.com/flutter/flutter/issues/113836
+      if (event.data is RawKeyEventDataWeb && event.physicalKey == PhysicalKeyboardKey.altRight) {
+        _keysPressed[event.physicalKey] = event.logicalKey;
+      }
     }
   }
 
   final Map<PhysicalKeyboardKey, LogicalKeyboardKey> _keysPressed = <PhysicalKeyboardKey, LogicalKeyboardKey>{};
-  final Set<PhysicalKeyboardKey> _hiddenKeysPressed = <PhysicalKeyboardKey>{};
 
   /// Returns the set of keys currently pressed.
   Set<LogicalKeyboardKey> get keysPressed => _keysPressed.values.toSet();
@@ -879,13 +913,14 @@ class _ModifierSidePair {
 
   @override
   bool operator ==(Object other) {
-    if (other.runtimeType != runtimeType)
+    if (other.runtimeType != runtimeType) {
       return false;
+    }
     return other is _ModifierSidePair
         && other.modifier == modifier
         && other.side == side;
   }
 
   @override
-  int get hashCode => ui.hashValues(modifier, side);
+  int get hashCode => Object.hash(modifier, side);
 }

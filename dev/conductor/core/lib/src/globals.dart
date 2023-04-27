@@ -12,11 +12,9 @@ const String gsutilBinary = 'gsutil.py';
 const String kFrameworkDefaultBranch = 'master';
 const String kForceFlag = 'force';
 
-const List<String> kBaseReleaseChannels = <String>['stable', 'beta', 'dev'];
+const List<String> kBaseReleaseChannels = <String>['stable', 'beta'];
 
 const List<String> kReleaseChannels = <String>[...kBaseReleaseChannels, FrameworkRepository.defaultBranch];
-
-const List<String> kReleaseIncrements = <String>['y', 'z', 'm', 'n'];
 
 const String kReleaseDocumentationUrl = 'https://github.com/flutter/flutter/wiki/Flutter-Cherrypick-Process';
 
@@ -24,13 +22,24 @@ const String kLuciPackagingConsoleLink = 'https://ci.chromium.org/p/flutter/g/pa
 
 const String kWebsiteReleasesUrl = 'https://docs.flutter.dev/development/tools/sdk/releases';
 
+const String discordReleaseChannel =
+    'https://discord.com/channels/608014603317936148/783492179922124850';
+
+const String flutterReleaseHotline =
+    'https://mail.google.com/chat/u/0/#chat/space/AAAA6RKcK2k';
+
+const String hotfixToStableWiki =
+    'https://github.com/flutter/flutter/wiki/Hotfixes-to-the-Stable-Channel';
+
+const String flutterAnnounceGroup =
+    'https://groups.google.com/g/flutter-announce';
+
+const String hotfixDocumentationBestPractices =
+    'https://github.com/flutter/flutter/wiki/Hotfix-Documentation-Best-Practices';
+
 final RegExp releaseCandidateBranchRegex = RegExp(
   r'flutter-(\d+)\.(\d+)-candidate\.(\d+)',
 );
-
-/// Whether all releases published to the beta channel should be mirrored to
-/// dev.
-const bool kSynchronizeDevWithBeta = true;
 
 /// Cast a dynamic to String and trim.
 String stdoutToString(dynamic input) {

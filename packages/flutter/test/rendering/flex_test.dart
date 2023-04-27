@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'rendering_tester.dart';
 
 void main() {
+  TestRenderingFlutterBinding.ensureInitialized();
+
   test('Overconstrained flex', () {
     final RenderDecoratedBox box = RenderDecoratedBox(decoration: const BoxDecoration());
     final RenderFlex flex = RenderFlex(textDirection: TextDirection.ltr, children: <RenderBox>[box]);
@@ -58,18 +60,30 @@ void main() {
   test('Clip behavior is respected', () {
     const BoxConstraints viewport = BoxConstraints(maxHeight: 100.0, maxWidth: 100.0);
     final TestClipPaintingContext context = TestClipPaintingContext();
+    bool hadErrors = false;
 
-    // By default, clipBehavior should be Clip.none
-    final RenderFlex defaultFlex = RenderFlex(direction: Axis.vertical, children: <RenderBox>[box200x200]);
-    layout(defaultFlex, constraints: viewport, phase: EnginePhase.composite, onErrors: expectOverflowedErrors);
-    context.paintChild(defaultFlex, Offset.zero);
-    expect(context.clipBehavior, equals(Clip.none));
-
-    for (final Clip clip in Clip.values) {
-      final RenderFlex flex = RenderFlex(direction: Axis.vertical, children: <RenderBox>[box200x200], clipBehavior: clip);
-      layout(flex, constraints: viewport, phase: EnginePhase.composite, onErrors: expectOverflowedErrors);
+    for (final Clip? clip in <Clip?>[null, ...Clip.values]) {
+      final RenderFlex flex;
+      switch (clip) {
+        case Clip.none:
+        case Clip.hardEdge:
+        case Clip.antiAlias:
+        case Clip.antiAliasWithSaveLayer:
+          flex = RenderFlex(direction: Axis.vertical, children: <RenderBox>[box200x200], clipBehavior: clip!);
+          break;
+        case null:
+          flex = RenderFlex(direction: Axis.vertical, children: <RenderBox>[box200x200]);
+          break;
+      }
+      layout(flex, constraints: viewport, phase: EnginePhase.composite, onErrors: () {
+        absorbOverflowedErrors();
+        hadErrors = true;
+      });
       context.paintChild(flex, Offset.zero);
-      expect(context.clipBehavior, equals(clip));
+      // By default, clipBehavior should be Clip.none
+      expect(context.clipBehavior, equals(clip ?? Clip.none));
+      expect(hadErrors, isTrue);
+      hadErrors = false;
     }
   });
 
@@ -408,7 +422,7 @@ void main() {
     box2ParentData.flex = 1;
     final List<dynamic> exceptions = <dynamic>[];
     layout(parent, onErrors: () {
-      exceptions.addAll(renderer.takeAllFlutterExceptions());
+      exceptions.addAll(TestRenderingFlutterBinding.instance.takeAllFlutterExceptions());
     });
     expect(exceptions, isNotEmpty);
     expect(exceptions.first, isFlutterError);
@@ -435,7 +449,7 @@ void main() {
     box2ParentData.fit = FlexFit.loose;
     final List<dynamic> exceptions = <dynamic>[];
     layout(parent, onErrors: () {
-      exceptions.addAll(renderer.takeAllFlutterExceptions());
+      exceptions.addAll(TestRenderingFlutterBinding.instance.takeAllFlutterExceptions());
     });
     expect(exceptions, isNotEmpty);
     expect(exceptions.first, isFlutterError);
@@ -643,7 +657,7 @@ void main() {
     // This forces a check for _hasOverflow
     expect(flex.toStringShort(), isNot(contains('OVERFLOWING')));
     layout(flex, phase: EnginePhase.paint, onErrors: () {
-      exceptions.addAll(renderer.takeAllFlutterExceptions());
+      exceptions.addAll(TestRenderingFlutterBinding.instance.takeAllFlutterExceptions());
     });
     // We expect the RenderFlex to throw during performLayout() for not having
     // a text direction, thus leaving it with a null overflow value. It'll then

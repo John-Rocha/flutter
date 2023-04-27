@@ -48,7 +48,7 @@ class NextCommand extends Command<void> {
   String get description => 'Proceed to the next release phase.';
 
   @override
-  Future<void> run() {
+  Future<void> run() async {
     final File stateFile = checkouts.fileSystem.file(argResults![kStateOption]);
     if (!stateFile.existsSync()) {
       throw ConductorException(
@@ -57,7 +57,7 @@ class NextCommand extends Command<void> {
     }
     final pb.ConductorState state = state_import.readStateFromFile(stateFile);
 
-    return NextContext(
+    await NextContext(
       autoAccept: argResults![kYesFlag] as bool,
       checkouts: checkouts,
       force: argResults![kForceFlag] as bool,
@@ -74,12 +74,9 @@ class NextContext extends Context {
   const NextContext({
     required this.autoAccept,
     required this.force,
-    required Checkouts checkouts,
-    required File stateFile,
-  }) : super(
-    checkouts: checkouts,
-    stateFile: stateFile,
-  );
+    required super.checkouts,
+    required super.stateFile,
+  });
 
   final bool autoAccept;
   final bool force;
@@ -101,22 +98,6 @@ class NextContext extends Context {
             upstreamRemote: upstream,
             previousCheckoutLocation: state.engine.checkoutPath,
         );
-        // check if the candidate branch is enabled in .ci.yaml
-        final CiYaml engineCiYaml = await engine.ciYaml;
-        if (!engineCiYaml.enabledBranches.contains(state.engine.candidateBranch)) {
-          engineCiYaml.enableBranch(state.engine.candidateBranch);
-          // commit
-          final String revision = await engine.commit(
-              'add branch ${state.engine.candidateBranch} to enabled_branches in .ci.yaml',
-              addFirst: true,
-          );
-          // append to list of cherrypicks so we know a PR is required
-          state.engine.cherrypicks.add(pb.Cherrypick(
-                  appliedRevision: revision,
-                  state: pb.CherrypickState.COMPLETED,
-          ));
-        }
-
         if (!state_import.requiresEnginePR(state)) {
           stdio.printStatus(
               'This release has no engine cherrypicks. No Engine PR is necessary.\n',
@@ -212,13 +193,11 @@ class NextContext extends Context {
           upstreamRemote: upstream,
           previousCheckoutLocation: state.framework.checkoutPath,
         );
-
-        // Check if the current candidate branch is enabled
-        if (!(await framework.ciYaml).enabledBranches.contains(state.framework.candidateBranch)) {
-          (await framework.ciYaml).enableBranch(state.framework.candidateBranch);
-          // commit
+        stdio.printStatus('Writing candidate branch...');
+        bool needsCommit = await framework.updateCandidateBranchVersion(state.framework.candidateBranch);
+        if (needsCommit) {
           final String revision = await framework.commit(
-              'add branch ${state.framework.candidateBranch} to enabled_branches in .ci.yaml',
+              'Create candidate branch version ${state.framework.candidateBranch} for ${state.releaseChannel}',
               addFirst: true,
           );
           // append to list of cherrypicks so we know a PR is required
@@ -227,9 +206,8 @@ class NextContext extends Context {
                   state: pb.CherrypickState.COMPLETED,
           ));
         }
-
         stdio.printStatus('Rolling new engine hash $engineRevision to framework checkout...');
-        final bool needsCommit = await framework.updateEngineRevision(engineRevision);
+        needsCommit = await framework.updateEngineRevision(engineRevision);
         if (needsCommit) {
           final String revision = await framework.commit(
               'Update Engine revision to $engineRevision for ${state.releaseChannel} release ${state.releaseVersion}',
@@ -324,37 +302,31 @@ class NextContext extends Context {
             previousCheckoutLocation: state.framework.checkoutPath,
         );
         final String headRevision = await framework.reverseParse('HEAD');
-        final List<String> releaseRefs = <String>[state.releaseChannel];
-        if (kSynchronizeDevWithBeta && state.releaseChannel == 'beta') {
-          releaseRefs.add('dev');
-        }
-        for (final String releaseRef in releaseRefs) {
-          if (autoAccept == false) {
-            // dryRun: true means print out git command
-            await framework.pushRef(
+        if (autoAccept == false) {
+          // dryRun: true means print out git command
+          await framework.pushRef(
               fromRef: headRevision,
-              toRef: releaseRef,
+              toRef: state.releaseChannel,
               remote: state.framework.upstream.url,
               force: force,
               dryRun: true,
-            );
+          );
 
-            final bool response = await prompt(
-              'Are you ready to publish version ${state.releaseVersion} to $releaseRef?',
-            );
-            if (!response) {
-              stdio.printError('Aborting command.');
-              updateState(state, stdio.logs);
-              return;
-            }
+          final bool response = await prompt(
+            'Are you ready to publish version ${state.releaseVersion} to ${state.releaseChannel}?',
+          );
+          if (!response) {
+            stdio.printError('Aborting command.');
+            updateState(state, stdio.logs);
+            return;
           }
-          await framework.pushRef(
+        }
+        await framework.pushRef(
             fromRef: headRevision,
-            toRef: releaseRef,
+            toRef: state.releaseChannel,
             remote: state.framework.upstream.url,
             force: force,
-          );
-        }
+        );
         break;
       case pb.ReleasePhase.VERIFY_RELEASE:
         stdio.printStatus(
@@ -362,7 +334,8 @@ class NextContext extends Context {
             '\t$kLuciPackagingConsoleLink',
         );
         if (autoAccept == false) {
-          final bool response = await prompt('Have all packaging builds finished successfully?');
+          final bool response = await prompt(
+              'Have all packaging builds finished successfully and post release announcements been completed?');
           if (!response) {
             stdio.printError('Aborting command.');
             updateState(state, stdio.logs);

@@ -50,9 +50,9 @@ void main() {
 
 
   test('TextTheme merges properly in the presence of null fields.', () {
-    const TextTheme partialTheme = TextTheme(headline6: TextStyle(color: Color(0xcafefeed)));
+    const TextTheme partialTheme = TextTheme(titleLarge: TextStyle(color: Color(0xcafefeed)));
     final TextTheme fullTheme = ThemeData.fallback().textTheme.merge(partialTheme);
-    expect(fullTheme.headline6!.color, equals(partialTheme.headline6!.color));
+    expect(fullTheme.titleLarge!.color, equals(partialTheme.titleLarge!.color));
 
     const TextTheme onlyHeadlineSmallAndTitleLarge = TextTheme(
       headlineSmall: TextStyle(color: Color(0xcafefeed)),
@@ -79,6 +79,7 @@ void main() {
     const Color displayColor = Color(0x00000001);
     const Color bodyColor = Color(0x00000002);
     const String fontFamily = 'fontFamily';
+    const List<String> fontFamilyFallback = <String>['font', 'family', 'fallback'];
     const Color decorationColor = Color(0x00000003);
     const TextDecorationStyle decorationStyle = TextDecorationStyle.dashed;
     final TextDecoration decoration = TextDecoration.combine(<TextDecoration>[
@@ -89,6 +90,7 @@ void main() {
     final Typography typography = Typography.material2018();
     final TextTheme theme = typography.black.apply(
       fontFamily: fontFamily,
+      fontFamilyFallback: fontFamilyFallback,
       displayColor: displayColor,
       bodyColor: bodyColor,
       decoration: decoration,
@@ -130,6 +132,7 @@ void main() {
       theme.labelSmall!,
     ];
     expect(themeStyles.every((TextStyle style) => style.fontFamily == fontFamily), true);
+    expect(themeStyles.every((TextStyle style) => style.fontFamilyFallback == fontFamilyFallback), true);
     expect(themeStyles.every((TextStyle style) => style.decorationColor == decorationColor), true);
     expect(themeStyles.every((TextStyle style) => style.decorationStyle == decorationStyle), true);
     expect(themeStyles.every((TextStyle style) => style.decoration == decoration), true);
@@ -219,5 +222,22 @@ void main() {
     expect(lerped.labelLarge, null);
     expect(lerped.labelMedium, null);
     expect(lerped.labelSmall, null);
+  });
+
+  test('VisualDensity.lerp', () {
+    const VisualDensity a = VisualDensity(horizontal: 1.0, vertical: .5);
+    const VisualDensity b = VisualDensity(horizontal: 2.0, vertical: 1.0);
+
+    final VisualDensity noLerp = VisualDensity.lerp(a, b, 0.0);
+    expect(noLerp.horizontal, 1.0);
+    expect(noLerp.vertical, .5);
+
+    final VisualDensity quarterLerp = VisualDensity.lerp(a, b, .25);
+    expect(quarterLerp.horizontal, 1.25);
+    expect(quarterLerp.vertical, .625);
+
+    final VisualDensity fullLerp = VisualDensity.lerp(a, b, 1.0);
+    expect(fullLerp.horizontal, 2.0);
+    expect(fullLerp.vertical, 1.0);
   });
 }

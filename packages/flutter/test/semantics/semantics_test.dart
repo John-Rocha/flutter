@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:ui';
+
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math_64.dart';
@@ -11,6 +13,8 @@ import '../rendering/rendering_tester.dart';
 const int kMaxFrameworkAccessibilityIdentifier = (1<<16) - 1;
 
 void main() {
+  TestRenderingFlutterBinding.ensureInitialized();
+
   setUp(() {
     debugResetSemanticsIdCounter();
   });
@@ -269,7 +273,7 @@ void main() {
     });
 
     test('after markNeedsSemanticsUpdate() all render objects between two semantic boundaries are asked for annotations', () {
-      renderer.pipelineOwner.ensureSemantics();
+      TestRenderingFlutterBinding.instance.pipelineOwner.ensureSemantics();
 
       TestRender middle;
       final TestRender root = TestRender(
@@ -559,6 +563,7 @@ void main() {
       '   increasedValue: ""\n'
       '   decreasedValue: ""\n'
       '   hint: ""\n'
+      '   tooltip: ""\n'
       '   textDirection: null\n'
       '   sortKey: null\n'
       '   platformViewId: null\n'
@@ -657,6 +662,7 @@ void main() {
       '   increasedValue: ""\n'
       '   decreasedValue: ""\n'
       '   hint: ""\n'
+      '   tooltip: ""\n'
       '   textDirection: null\n'
       '   sortKey: null\n'
       '   platformViewId: null\n'
@@ -694,7 +700,9 @@ void main() {
   });
 
   test('Semantics id does not repeat', () {
-    final SemanticsOwner owner = SemanticsOwner();
+    final SemanticsOwner owner = SemanticsOwner(
+      onSemanticsUpdate: (SemanticsUpdate update) {},
+    );
     const int expectId = 1400;
     SemanticsNode? nodeToRemove;
     for (int i = 0; i < kMaxFrameworkAccessibilityIdentifier; i++) {
@@ -838,21 +846,27 @@ class TestRender extends RenderProxyBox {
     super.describeSemanticsConfiguration(config);
 
     config.isSemanticBoundary = isSemanticBoundary;
-    if (hasTapAction)
+    if (hasTapAction) {
       config.onTap = () { };
-    if (hasLongPressAction)
+    }
+    if (hasLongPressAction) {
       config.onLongPress = () { };
-    if (hasScrollLeftAction)
+    }
+    if (hasScrollLeftAction) {
       config.onScrollLeft = () { };
-    if (hasScrollRightAction)
+    }
+    if (hasScrollRightAction) {
       config.onScrollRight = () { };
-    if (hasScrollUpAction)
+    }
+    if (hasScrollUpAction) {
       config.onScrollUp = () { };
-    if (hasScrollDownAction)
+    }
+    if (hasScrollDownAction) {
       config.onScrollDown = () { };
+    }
   }
 }
 
 class CustomSortKey extends OrdinalSortKey {
-  const CustomSortKey(double order, {String? name}) : super(order, name: name);
+  const CustomSortKey(super.order, {super.name});
 }
